@@ -17,18 +17,39 @@ void Say(char *phrase)
 
 	exit(1);
 }
+	
+#define CHUNK 512
+
 int main(int argc, char **argv)
 {
-	if (argc != 3)
+	int i;
+	unsigned long bs = CHUNK;
+
+	for (i = 0; i < argc; i++) {
+		if (0 == strcmp(argv[i], "-bs")) {
+			if (argv[i + 1] != NULL)
+				bs = atoi(argv[i + 1]);
+				i++;
+		}
+	}
+
+	printf("bs is %d\n", bs);
+	if (argc < 3)
 		Say("Wrong argument count");
 
 	int in_fd, out_fd;
 
 	in_fd = open(argv[1], O_RDONLY);
-	out_fd = open(argv[2], O_WRONLY | O_CREAT);
+	if (in_fd < 0)
+		Say("Whoaaaaaa!");
 
-	#define CHUNK 512
-	char buf[CHUNK] = { 0 };
+	out_fd = open(argv[2], O_WRONLY | O_CREAT);
+	if (in_fd < 0)
+		Say("Whoaaaa!!!");
+
+	char buf[bs];
+
+	memset(buf, 0, bs);
 	
 	ssize_t chunk = 0;
 	ssize_t bytes = 0;
@@ -42,7 +63,7 @@ int main(int argc, char **argv)
 	int total = 0;
 
 	do {
-		bytes = read(in_fd, buf, CHUNK);
+		bytes = read(in_fd, buf, bs);
 		if (bytes < 0)
 			break;
 
