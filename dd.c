@@ -33,7 +33,6 @@ int main(int argc, char **argv)
 		}
 	}
 
-	printf("bs is %d\n", bs);
 	if (argc < 3)
 		Say("Wrong argument count");
 
@@ -80,7 +79,7 @@ int main(int argc, char **argv)
 		total += bytes;
 		
 		int current = total  / percent;
-		printf("\r");
+		printf("                                                    \r");
 		printf("%d percent", current);
 		memset(buf, 0, bytes); // faster
 	} while (bytes);
