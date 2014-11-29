@@ -3,10 +3,25 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <errno.h>
+
+void Scream(char *fmt, ...)
+{
+	char buf[8192] = { 0 };
+	va_list ap;
+
+	va_start(ap, fmt);
+	sprintf(buf, "Nooo! %s\n", fmt);
+	va_end(ap);
+	fprintf(stderr, buf);
+
+	exit(EXIT_FAILURE);
+} 
 
 void Say(char *phrase)
 {
@@ -14,9 +29,18 @@ void Say(char *phrase)
 
 	sprintf(buf, "%s\n", phrase);
 	printf(buf);
-
-	exit(1);
 }
+
+void Usage(void)
+{
+	printf("ARGV[0] <from> <to> [OPTION]\n");
+	printf("OPTIONS:\n");
+	printf("    -bs <block size>\n");
+	printf("    -h  help.\n");
+
+	exit(EXIT_FAILURE);
+}
+
 	
 #define CHUNK 512
 
@@ -31,20 +55,22 @@ int main(int argc, char **argv)
 				bs = atoi(argv[i + 1]);
 				i++;
 		}
+		if (0 == strcmp(argv[i], "-h") || ! strncmp(argv[i], "--h", 3)) 
+			Usage();
 	}
 
 	if (argc < 3)
-		Say("Wrong argument count");
+		Usage();
 
 	int in_fd, out_fd;
 
-	in_fd = open(argv[1], O_RDONLY);
+	in_fd = open(argv[1], O_RDONLY, 0666);
 	if (in_fd < 0)
-		Say("Whoaaaaaa!");
+		Scream(strerror(errno));
 
-	out_fd = open(argv[2], O_WRONLY | O_CREAT);
+	out_fd = open(argv[2], O_WRONLY | O_CREAT, 0666);
 	if (in_fd < 0)
-		Say("Whoaaaa!!!");
+		Scream(strerror(errno));
 
 	char buf[bs];
 
@@ -80,7 +106,7 @@ int main(int argc, char **argv)
 		
 		int current = total  / percent;
 		printf("                                                    \r");
-		printf("%d percent", current);
+		printf("%d%% %dK of %dK", current, total >> 8, length >> 8);
 		memset(buf, 0, bytes); // faster
 	} while (bytes);
 
