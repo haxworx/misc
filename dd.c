@@ -5,10 +5,15 @@
 #include <string.h>
 #include <stdarg.h>
 #include <unistd.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <sys/time.h>
+#include <sys/select.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 void Scream(char *fmt, ...)
 {
@@ -29,6 +34,34 @@ void Say(char *phrase)
 
 	sprintf(buf, "%s\n", phrase);
 	printf(buf);
+}
+
+
+int Client(char *hostname, int port)
+{
+        int sock;
+        struct hostent *host;
+        struct sockaddr_in host_addr;
+
+        sock = socket(AF_INET, SOCK_STREAM, 0);
+        if (sock < 0)
+                Scream("socket %s\n", strerror(errno));
+
+        host = gethostbyname(hostname);
+        if (host == NULL)
+                Scream("gethostbyname");
+
+        host_addr.sin_family = AF_INET;
+        host_addr.sin_port = htons(port);
+        host_addr.sin_addr = *((struct in_addr *) host->h_addr);
+        memset(&host_addr.sin_zero, 0, 8);
+
+        int status = connect(sock, (struct sockaddr *) &host_addr, sizeof(struct sockaddr));
+        if (status == 0) {
+                return sock;
+        }
+
+        return 0;
 }
 
 void Usage(void)
