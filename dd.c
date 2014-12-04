@@ -37,12 +37,12 @@ void Say(char *phrase)
 }
 
 
-int Client(char *hostname, int port)
+int Connect(char *hostname, int port)
 {
         int sock;
         struct hostent *host;
         struct sockaddr_in host_addr;
-
+	printf("hostname: %s\n", hostname);
         sock = socket(AF_INET, SOCK_STREAM, 0);
         if (sock < 0)
                 Scream("socket %s\n", strerror(errno));
@@ -77,10 +77,44 @@ void Usage(void)
 	
 #define CHUNK 512
 
+char *FileFromURL(char *addr)
+{
+	char *str = strrchr(addr, '/');
+	if (!str)
+		Scream("FileFromURL");
+
+	str++;
+	
+	return str;
+}
+
+char *HostFromURL(char *addr)
+{
+	char *str = strstr(addr, "http://");
+	if (str) {
+		addr += strlen("http://"); 
+		char *end = strchr(addr, '/');
+		*end = '\0';
+		return addr;
+	}
+
+	Scream("Invalid URL");
+
+	return NULL;
+}
+
+void DownloadHTTP(int sock, char *addr, char *file)
+{
+
+
+}
+
 int main(int argc, char **argv)
 {
 	int i;
 	unsigned long bs = CHUNK;
+	char *infile = argv[1];
+	int get_from_web = 0;
 
 	for (i = 0; i < argc; i++) {
 		if (0 == strcmp(argv[i], "-bs")) {
@@ -95,11 +129,25 @@ int main(int argc, char **argv)
 	if (argc < 3)
 		Usage();
 
-	int in_fd, out_fd;
+	if (!strncmp("http://", infile, 7)) 
+		get_from_web = 1;
 
-	in_fd = open(argv[1], O_RDONLY, 0666);
-	if (in_fd < 0)
-		Scream(strerror(errno));
+	int in_fd, out_fd, sock;
+
+	
+	if (get_from_web) {
+		char *filename = strdup(FileFromURL(infile));
+		char *address = strdup(HostFromURL(infile));
+		if (filename && address) {
+			sock = in_fd = Connect(address, 80);	
+			DownloadHTTP(sock, address, filename);	
+		} else
+			Scream("MacBorken URL");
+	} else {
+		in_fd = open(argv[1], O_RDONLY, 0666);
+		if (in_fd < 0)
+			Scream(strerror(errno));
+	}
 
 	out_fd = open(argv[2], O_WRONLY | O_CREAT, 0666);
 	if (in_fd < 0)
