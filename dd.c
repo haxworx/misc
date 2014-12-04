@@ -124,26 +124,6 @@ void DownloadHTTP(int sock, char *addr, char *file)
 	char chunk[8192] = { 0 };
 	sprintf(out, "GET %s HTTP/1.1\r\nHost: %s\r\n\r\n", file, addr);
 	write(sock, out, strlen(out));
-	int blocks = 1;
-	int length = 0;
-
-	data = malloc(blocks * BLOCK);
-
-	length = BLOCK;
-	ssize_t bytes;
-	while (1) {
-		printf("top is %d\n", bytes);
-		bytes = read(sock, chunk, length);
-		printf("mid is %d\n", bytes);
-		if (bytes <= 0) {
-			Scream("%d %s", bytes, strerror(errno));
-			break;
-		}
-		printf("%s\n", chunk);
-		memset(chunk, 0, bytes);
-		printf("bytes is %d\n", bytes);
-	}
-	
 }
 
 int main(int argc, char **argv)
@@ -207,14 +187,14 @@ int main(int argc, char **argv)
 
 	do {
 		bytes = read(in_fd, buf, bs);
-		if (bytes < 0)
+		if (bytes <= 0)
 			break;
 
 		chunk = bytes;
 		
 		while (chunk) {
 			ssize_t count = write(out_fd, buf, chunk);
-			if (count < 0)
+			if (count <= 0)
 				break;
 
 			chunk -= count;
