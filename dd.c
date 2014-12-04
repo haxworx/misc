@@ -115,28 +115,35 @@ char *HostFromURL(char *addr)
 	return NULL;
 }
 
+#define BLOCK 1024
+
 void DownloadHTTP(int sock, char *addr, char *file)
 {
+	char *data = NULL;
 	char out[8192] = { 0 };
-	char in[8192] = { 0 };
+	char chunk[8192] = { 0 };
 	sprintf(out, "GET %s HTTP/1.1\r\nHost: %s\r\n\r\n", file, addr);
 	write(sock, out, strlen(out));
-	read(sock, in, 1024);
+	int blocks = 1;
+	int length = 0;
+
+	data = malloc(blocks * BLOCK);
+
+	length = BLOCK;
+	ssize_t bytes;
+	while (1) {
+		printf("top is %d\n", bytes);
+		bytes = read(sock, chunk, length);
+		printf("mid is %d\n", bytes);
+		if (bytes <= 0) {
+			Scream("%d %s", bytes, strerror(errno));
+			break;
+		}
+		printf("%s\n", chunk);
+		memset(chunk, 0, bytes);
+		printf("bytes is %d\n", bytes);
+	}
 	
-	char *p = in;
-/*HTTP/1.1 200 OK
-Date: Thu, 04 Dec 2014 22:15:14 GMT
-Last-Modified: Tue, 16 Jul 2013 15:53:43 GMT
-Content-Length: 7282
-Content-Type: text/plain; charset=utf-8
-Server: tachyon
-*/
-	int len;
-	char buf[8192] = { 0 };
-	sscanf(in, "Content-Length: %d", &len);
-	sscanf(in, "Server: %d\", string");
-	
-	exit(22);
 }
 
 int main(int argc, char **argv)
