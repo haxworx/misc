@@ -79,13 +79,25 @@ void Usage(void)
 
 char *FileFromURL(char *addr)
 {
-	char *str = strrchr(addr, '/');
-	if (!str)
-		Scream("FileFromURL");
-
-	str++;
+	char *str = NULL;
 	
-	return str;
+	char *p = addr;
+	if (!p)
+		Scream("broken file path");
+	
+	str = strstr(addr, "http://");
+	if (str) {
+		str += strlen("http://");
+		char *p = strchr(str, '/');
+		if (p) {
+			return p;
+		}
+	}
+
+	if (!p)
+		Scream("FileFromURL");
+	
+	return p;
 }
 
 char *HostFromURL(char *addr)
@@ -105,8 +117,26 @@ char *HostFromURL(char *addr)
 
 void DownloadHTTP(int sock, char *addr, char *file)
 {
-
-
+	char out[8192] = { 0 };
+	char in[8192] = { 0 };
+	sprintf(out, "GET %s HTTP/1.1\r\nHost: %s\r\n\r\n", file, addr);
+	write(sock, out, strlen(out));
+	read(sock, in, 1024);
+	
+	char *p = in;
+/*HTTP/1.1 200 OK
+Date: Thu, 04 Dec 2014 22:15:14 GMT
+Last-Modified: Tue, 16 Jul 2013 15:53:43 GMT
+Content-Length: 7282
+Content-Type: text/plain; charset=utf-8
+Server: tachyon
+*/
+	int len;
+	char buf[8192] = { 0 };
+	sscanf(in, "Content-Length: %d", &len);
+	sscanf(in, "Server: %d\", string");
+	
+	exit(22);
 }
 
 int main(int argc, char **argv)
@@ -133,7 +163,7 @@ int main(int argc, char **argv)
 		get_from_web = 1;
 
 	int in_fd, out_fd, sock;
-
+	int length = 0;
 	
 	if (get_from_web) {
 		char *filename = strdup(FileFromURL(infile));
@@ -163,7 +193,7 @@ int main(int argc, char **argv)
 	struct stat fstats;
 	stat(argv[1], &fstats);
 	
-	int length = fstats.st_size;
+	length = fstats.st_size;
 	int percent = length / 100;	
 
 	int total = 0;
