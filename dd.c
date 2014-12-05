@@ -42,7 +42,6 @@ int Connect(char *hostname, int port)
         int sock;
         struct hostent *host;
         struct sockaddr_in host_addr;
-	printf("hostname: %s\n", hostname);
         sock = socket(AF_INET, SOCK_STREAM, 0);
         if (sock < 0)
                 Scream("socket %s\n", strerror(errno));
@@ -116,14 +115,47 @@ char *HostFromURL(char *addr)
 }
 
 #define BLOCK 1024
-
-void DownloadHTTP(int sock, char *addr, char *file)
+void Chomp(char *str) 
 {
-	char *data = NULL;
+	char *p = str;
+
+	while (*p) {
+		if (*p == '\r' || *p == '\n') {
+			*p = '\0';
+		}
+		++p;
+	}
+}
+ssize_t ReadLength(int sock)
+{
+	int bytes = -1;
+	int len = 0;
+	char buf[8192] = { 0 };
+	while (buf[len -1] != '\r' && buf[len] != '\n') {
+		bytes = read(sock, &buf[len], 1);
+		len += bytes;
+	}
+	
+	buf[len] ='\0';
+	printf("%s\n", buf);
+	len = 0;
+	sscanf(buf, "\nContent-Length: %d\r", &len);
+
+	return len; // not found
+}	
+int GetHeaders(int sock, char *addr, char *file)
+{
 	char out[8192] = { 0 };
-	char chunk[8192] = { 0 };
 	sprintf(out, "GET %s HTTP/1.1\r\nHost: %s\r\n\r\n", file, addr);
 	write(sock, out, strlen(out));
+
+	ssize_t len = 0;
+
+	do {
+		len = ReadLength(sock);
+	} while (!len);
+
+	return len;
 }
 
 int main(int argc, char **argv)
@@ -157,7 +189,7 @@ int main(int argc, char **argv)
 		char *address = strdup(HostFromURL(infile));
 		if (filename && address) {
 			sock = in_fd = Connect(address, 80);	
-			DownloadHTTP(sock, address, filename);	
+			length = GetHeaders(sock, address, filename);	
 		} else
 			Scream("MacBorken URL");
 	} else {
@@ -167,7 +199,7 @@ int main(int argc, char **argv)
 	}
 
 	out_fd = open(argv[2], O_WRONLY | O_CREAT, 0666);
-	if (in_fd < 0)
+	if (out_fd < 0)
 		Scream(strerror(errno));
 
 	char buf[bs];
@@ -179,8 +211,8 @@ int main(int argc, char **argv)
 
 	struct stat fstats;
 	stat(argv[1], &fstats);
-	
-	length = fstats.st_size;
+	if (!length)
+		length = fstats.st_size;
 	int percent = length / 100;	
 
 	int total = 0;
@@ -206,7 +238,7 @@ int main(int argc, char **argv)
 		printf("                                                    \r");
 		printf("%d%% %dK of %dK", current, total >> 8, length >> 8);
 		memset(buf, 0, bytes); // faster
-	} while (bytes);
+	} while (total != length && bytes);
 
 	printf("\r\ndone!\n");
 	
