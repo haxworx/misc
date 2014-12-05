@@ -126,26 +126,45 @@ void Chomp(char *str)
 		++p;
 	}
 }
+
 ssize_t ReadLength(int sock)
 {
 	int bytes = -1;
 	int len = 0;
+	char total[8192] = { 0 };
 	char buf[8192] = { 0 };
-	while (buf[len -1] != '\r' && buf[len] != '\n') {
+	while ( buf[len -1] != '\r' && buf[len] != '\n') {
 		bytes = read(sock, &buf[len], 1);
 		len += bytes;
 	}
 	
 	buf[len] ='\0';
-	printf("%s\n", buf);
 	len = 0;
 	sscanf(buf, "\nContent-Length: %d\r", &len);
+	if (!len) {
+		return 0;
+	}
+	
+	memset(buf, 0, 8192);	
+	int i = 0;
+	while (1) {
+	while (buf[i -1] != '\r' && buf[i] != '\n') {
+		bytes = read(sock, &buf[i], 1);
+		i += bytes;
+	}
+		buf[i] = '\0';
+		i = 0;
+		if (strlen(buf) == 2) {
+			return len;
+		}
+	}
 
 	return len; // not found
 }	
 int GetHeaders(int sock, char *addr, char *file)
 {
 	char out[8192] = { 0 };
+	char buf[8192] = { 0 };
 	sprintf(out, "GET %s HTTP/1.1\r\nHost: %s\r\n\r\n", file, addr);
 	write(sock, out, strlen(out));
 
@@ -155,6 +174,7 @@ int GetHeaders(int sock, char *addr, char *file)
 		len = ReadLength(sock);
 	} while (!len);
 
+	printf("len is %d\n", len);
 	return len;
 }
 
@@ -190,6 +210,7 @@ int main(int argc, char **argv)
 		if (filename && address) {
 			sock = in_fd = Connect(address, 80);	
 			length = GetHeaders(sock, address, filename);	
+			printf("Remote file length: %d\n", length);
 		} else
 			Scream("MacBorken URL");
 	} else {
@@ -216,6 +237,7 @@ int main(int argc, char **argv)
 	int percent = length / 100;	
 
 	int total = 0;
+	read(in_fd, buf, 1); // hack
 
 	do {
 		bytes = read(in_fd, buf, bs);
@@ -236,9 +258,9 @@ int main(int argc, char **argv)
 		
 		int current = total  / percent;
 		printf("                                                    \r");
-		printf("%d%% %dK of %dK", current, total >> 8, length >> 8);
+		printf("%d%% %dbytes of %dbytes", current, total, length);
 		memset(buf, 0, bytes); // faster
-	} while (total != length && bytes);
+	} while (length > total);
 
 	printf("\r\ndone!\n");
 	
