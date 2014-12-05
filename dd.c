@@ -1,5 +1,18 @@
-// DD WITH PROGRESSION!!!!!!!!!!!
+/*
+	This program is distributed as public domain.
+	Author: Al Poole <netstar@gmail.com>
+	
+	About:
+	
+	Alternative to "dd".
+	Can do local: 
+		this if=file.iso of=/dev/sdb
+		also!
+		this if=http://somesite.com/music.iso of=/dev/sdc
+	
+	Unbuffered read/write.
 
+*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -174,7 +187,6 @@ int GetHeaders(int sock, char *addr, char *file)
 		len = ReadLength(sock);
 	} while (!len);
 
-	printf("len is %d\n", len);
 	return len;
 }
 
@@ -210,7 +222,6 @@ int main(int argc, char **argv)
 		if (filename && address) {
 			sock = in_fd = Connect(address, 80);	
 			length = GetHeaders(sock, address, filename);	
-			printf("Remote file length: %d\n", length);
 		} else
 			Scream("MacBorken URL");
 	} else {
@@ -257,8 +268,9 @@ int main(int argc, char **argv)
 		total += bytes;
 		
 		int current = total  / percent;
+		if (current > 100) current = 100;
 		printf("                                                    \r");
-		printf("%d%% %dbytes of %dbytes", current, total, length);
+		printf("%d%% %d bytes of %d bytes", current, total, length);
 		memset(buf, 0, bytes); // faster
 	} while (length > total);
 
