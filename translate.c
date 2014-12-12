@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+#include <ctype.h>
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -20,11 +21,18 @@ void Failure(char *fmt, ...)
 	exit(EXIT_FAILURE);
 }
 
+typedef struct flags_t flags_t;
+struct flags_t {
+	int end_instruction;
+	int has_block;
+};
+
 typedef struct token_t token_t;
 struct token_t {
 	char token[128];
 	int type;
-	int end_instruction;
+	flags_t flags;
+	token_t *block;
 	token_t *next;
 };
 
@@ -37,11 +45,11 @@ struct token_t {
 
 #define TK_VAR_VAL 7 
 #define TK_VAR_NAM 8
+#define TK_OP_PWR 9
 
 int type_from_token(char *token)
 {
 	char *t = token;
-	int result = 0;	
 	
 	switch (*t) {
 		case '+':
@@ -59,6 +67,9 @@ int type_from_token(char *token)
 		case '=':
 			return TK_OP_ASG;
 			break;
+		case '^':
+			return TK_OP_PWR;
+			break;
 		
 	}	
 
@@ -74,7 +85,7 @@ int type_from_token(char *token)
 	return 0; 
 }
 
-token_t *AddToken(token_t *tokens, char *token, int end_of_line)
+token_t *AddToken(token_t *tokens, char *token, flags_t *flags)
 {
 	token_t *c = tokens;
 	
@@ -84,28 +95,38 @@ token_t *AddToken(token_t *tokens, char *token, int end_of_line)
 		c = calloc(1, sizeof(token_t));
 		strcpy(c->token, token);
 		c->type = type; //
-		c->end_instruction = end_of_line;
+		c->flags.end_instruction = flags->end_instruction;
+		c->flags.has_block = flags->has_block;
 		return c;
 	}
 
-	for (c; c->next; c = c->next);
+	for (; c->next; c = c->next);
 
 	if (c->next == NULL) {
 		c->next = calloc(1, sizeof(token_t));
 		c = c->next;
 		strcpy(c->token, token);
 		c->type = type; // 
-		c->end_instruction = end_of_line;
+		c->flags.end_instruction = flags->end_instruction;
+		c->flags.has_block = flags->has_block;
 		return c;
 	}
+
+	return NULL; // wtf?
 }
+
 
 void TokensList(token_t *tokens)
 {	
 	token_t *c = tokens->next;
 
 	while (c) {
-		printf("%s %d %d\n", c->token, c->type, c->end_instruction);
+		printf("%s %d %d %d\n", c->token, c->type, c->flags.end_instruction, c->flags.has_block);
+		token_t *b = c->block;
+		while (b) {
+			printf("\t%s %d %d %d\n", b->token, b->type, b->flags.end_instruction, b->flags.has_block);
+			b = b->next;
+		}
 		c = c->next;
 	}
 }
@@ -129,12 +150,11 @@ token_t *Tokenize(char *file, ssize_t length)
 
 	while (*m) {
 		char *start = m;
-		int have_quote = 0;
-		int end_of_line = 0;
+		int end_instruction = 0;
 
 		while (*m != ',' && *m != ' ' && *m != '\t' && *m != '\r') {
 			if (*m == '\n') {
-				end_of_line = 1;
+				end_instruction = 1;
 				break;
 			}
 			if (*m == '"') {
@@ -144,13 +164,45 @@ token_t *Tokenize(char *file, ssize_t length)
 				}
 				m++;
 			} else 
-				m++;
+				++m;
 			
 		}
 
-		*m = '\0'; ++m;
+		*m = '\0'; 
+		m++;
 
-		AddToken(tokens, start, end_of_line); 
+		flags_t flags;
+		memset(&flags, 0, sizeof(flags));
+
+
+		if (end_instruction) {
+			flags.end_instruction = end_instruction;
+			if (!strncmp(start, "sub", 3) || !strncmp(start, "if", 2) 
+				|| !strncmp(start, "while", 5) || strncmp(start, "loop", 4))
+				flags.has_block = 1;
+
+		}
+
+		token_t *here_i_am = AddToken(tokens, start, &flags);
+		
+		printf("well here it is %s\n", start);
+		if (end_instruction && flags.has_block && here_i_am) {
+			while (*m != ',' && *m != ' ' && *m != '\r') {
+				if (*m == '\t') {
+					m++;
+					while (*m != '\n')
+						++m;
+					m++;
+				} else {
+					++m;
+				}
+			}
+			
+			*m = '\0'; 
+			memset(&flags, 0, sizeof(flags));
+			printf("IT IS %s\n", start);
+			AddToken(here_i_am->block, start, &flags);
+		}
 
 		while (*m == ' ' || *m == '\t' || *m == '\r' || *m == '\n') {
 			++m;
