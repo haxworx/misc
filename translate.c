@@ -24,6 +24,7 @@ typedef struct token_t token_t;
 struct token_t {
 	char token[128];
 	int type;
+	int end_instruction;
 	token_t *next;
 };
 
@@ -61,22 +62,9 @@ int type_from_token(char *token)
 		
 	}	
 
-	char *old = t;
-/*
-	is this end of statement if so mark token as end-of-line
-
 	if (*t == '"' && t[strlen(t) - 1] == '"')
 		return TK_OP_STR;
-	while (*t) {
-		if ( t == &t[strlen(t) - 1]) {
-			puts("end");	
-			break;
-		}
-		t++;
-	}
 
-*/
-	t = old;
 
 	if (isdigit(*t))
 		return TK_VAR_VAL;
@@ -86,7 +74,7 @@ int type_from_token(char *token)
 	return 0; 
 }
 
-token_t *AddToken(token_t *tokens, char *token)
+token_t *AddToken(token_t *tokens, char *token, int end_of_line)
 {
 	token_t *c = tokens;
 	
@@ -96,7 +84,7 @@ token_t *AddToken(token_t *tokens, char *token)
 		c = calloc(1, sizeof(token_t));
 		strcpy(c->token, token);
 		c->type = type; //
-
+		c->end_instruction = end_of_line;
 		return c;
 	}
 
@@ -107,7 +95,7 @@ token_t *AddToken(token_t *tokens, char *token)
 		c = c->next;
 		strcpy(c->token, token);
 		c->type = type; // 
-
+		c->end_instruction = end_of_line;
 		return c;
 	}
 }
@@ -117,7 +105,7 @@ void TokensList(token_t *tokens)
 	token_t *c = tokens->next;
 
 	while (c) {
-		printf("%s %d\n", c->token, c->type);
+		printf("%s %d %d\n", c->token, c->type, c->end_instruction);
 		c = c->next;
 	}
 }
@@ -142,9 +130,13 @@ token_t *Tokenize(char *file, ssize_t length)
 	while (*m) {
 		char *start = m;
 		int have_quote = 0;
-		int is_string = 0;
+		int end_of_line = 0;
 
-		while (*m != ',' && *m != ' ' && *m != '\t' && *m != '\r' && *m != '\n') {
+		while (*m != ',' && *m != ' ' && *m != '\t' && *m != '\r') {
+			if (*m == '\n') {
+				end_of_line = 1;
+				break;
+			}
 			if (*m == '"') {
 				m++; // onwards christian soldier!
 				while (*m != '"') {
@@ -158,7 +150,7 @@ token_t *Tokenize(char *file, ssize_t length)
 
 		*m = '\0'; ++m;
 
-		AddToken(tokens, start); 
+		AddToken(tokens, start, end_of_line); 
 
 		while (*m == ' ' || *m == '\t' || *m == '\r' || *m == '\n') {
 			++m;
