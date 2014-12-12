@@ -27,15 +27,63 @@ struct token_t {
 	token_t *next;
 };
 
-#define INT 0001
-#define OPA 0002
-#define OPD 0003
-#define CAL 0004
+#define TK_OP_ADD 1
+#define TK_OP_DEL 2
+#define TK_OP_MUL 3
+#define TK_OP_DIV 4
+#define TK_OP_ASG 5
+#define TK_OP_STR 6
+
+#define TK_VAR_VAL 7 
+#define TK_VAR_NAM 8
 
 int type_from_token(char *token)
 {
+	char *t = token;
+	int result = 0;	
 	
-	return 0;
+	switch (*t) {
+		case '+':
+			return TK_OP_ADD;
+			break;
+		case '-':
+			return TK_OP_DEL;
+			break;
+		case '*':
+			return TK_OP_MUL;
+			break;
+		case '/':
+			return TK_OP_DIV;
+			break;
+		case '=':
+			return TK_OP_ASG;
+			break;
+		
+	}	
+
+	char *old = t;
+/*
+	is this end of statement if so mark token as end-of-line
+
+	if (*t == '"' && t[strlen(t) - 1] == '"')
+		return TK_OP_STR;
+	while (*t) {
+		if ( t == &t[strlen(t) - 1]) {
+			puts("end");	
+			break;
+		}
+		t++;
+	}
+
+*/
+	t = old;
+
+	if (isdigit(*t))
+		return TK_VAR_VAL;
+	else
+		return TK_VAR_NAM;
+
+	return 0; 
 }
 
 token_t *AddToken(token_t *tokens, char *token)
@@ -93,8 +141,19 @@ token_t *Tokenize(char *file, ssize_t length)
 
 	while (*m) {
 		char *start = m;
-		while (*m != ' ' && *m != '\t' && *m != '\r' && *m != '\n') {
-			m++;
+		int have_quote = 0;
+		int is_string = 0;
+
+		while (*m != ',' && *m != ' ' && *m != '\t' && *m != '\r' && *m != '\n') {
+			if (*m == '"') {
+				m++; // onwards christian soldier!
+				while (*m != '"') {
+					++m;
+				}
+				m++;
+			} else 
+				m++;
+			
 		}
 
 		*m = '\0'; ++m;
