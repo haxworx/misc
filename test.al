@@ -11,6 +11,8 @@ while 1
 	say "hi"	
 	new = "hi"
 	a3 = 123
+	if new > a3
+		say "hohoho"
 
 sub pubes arg1, arg2
 	say "hello world"

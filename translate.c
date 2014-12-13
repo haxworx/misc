@@ -24,7 +24,8 @@ void Failure(char *fmt, ...)
 typedef struct flags_t flags_t;
 struct flags_t {
 	int end_instruction;
-	int has_block;
+	int is_block;
+	int top_block;
 };
 
 typedef struct token_t token_t;
@@ -96,7 +97,7 @@ token_t *AddToken(token_t *tokens, char *token, flags_t *flags)
 		strcpy(c->token, token);
 		c->type = type; //
 		c->flags.end_instruction = flags->end_instruction;
-		c->flags.has_block = flags->has_block;
+		c->flags.is_block = flags->is_block;
 		return c;
 	}
 
@@ -108,7 +109,7 @@ token_t *AddToken(token_t *tokens, char *token, flags_t *flags)
 		strcpy(c->token, token);
 		c->type = type; // 
 		c->flags.end_instruction = flags->end_instruction;
-		c->flags.has_block = flags->has_block;
+		c->flags.is_block = flags->is_block;
 		return c;
 	}
 
@@ -121,40 +122,16 @@ void TokensList(token_t *tokens)
 	token_t *c = tokens->next;
 
 	while (c) {
-		printf("%s %d %d %d\n", c->token, c->type, c->flags.end_instruction, c->flags.has_block);
+		if (c->flags.is_block)
+		printf("\t\t");
+		printf("%s %d %d %d %d\n", c->token, c->type, c->flags.end_instruction, c->flags.is_block, c->flags.top_block);
 		token_t *b = c->block;
 		while (b) {
-			printf("\t%s %d %d %d\n", b->token, b->type, b->flags.end_instruction, b->flags.has_block);
+			printf("\t%s %d %d %d\n", b->token, b->type, b->flags.end_instruction, b->flags.is_block, c->flags.top_block);
 			b = b->next;
 		}
 		c = c->next;
 	}
-}
-
-void fwd(char *p, char *start, char *end)
-{
-	if (start < end)
-		p++;
-	else {
-		puts("NOOOOOOOOO");
-		exit(2);
-	}
-}
-
-void GetBlocks(char *m)
-{
-	char *start = m;
-	printf("here: %s\n", m);
-	++m;
-	while (*m != '\t') {
-		start = m;
-		m++;
-		while (*m != '\n') {
-			++m;
-		}
-		printf("here? %s\n", start);
-	}
-	*m = 0;
 }
 
 token_t *Tokenize(char *file, ssize_t length)
@@ -184,11 +161,12 @@ token_t *Tokenize(char *file, ssize_t length)
 		while (*m != ',' && *m != ' ' && *m != '\r') {
 			if (*m == '\t') {
 				m++;
-				while (*m != '\t')
+				while (*m != '\n')
 					++m;
-				m++;
-				//GetBlocks(m);
-			} else if (*m == '\n') {
+			//	m++;
+				flags.is_block = 1;
+			} 
+			if (*m == '\n') {
 				end_instruction = 1;
 				break;
 			} else if (*m == '"') {
@@ -204,13 +182,12 @@ token_t *Tokenize(char *file, ssize_t length)
 		*m = '\0'; 
 		m++;
 
-
-
 		if (end_instruction) {
 			flags.end_instruction = end_instruction;
 			if (!strncmp(start, "sub", 3) || !strncmp(start, "if", 2) 
 				|| !strncmp(start, "while", 5) || strncmp(start, "loop", 4))
-				flags.has_block = 1;
+				flags.top_block = 44;
+		
 
 		}
 		token_t *here_i_am = AddToken(tokens, start, &flags);
