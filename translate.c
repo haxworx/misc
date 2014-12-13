@@ -141,6 +141,22 @@ void fwd(char *p, char *start, char *end)
 	}
 }
 
+void GetBlocks(char *m)
+{
+	char *start = m;
+	printf("here: %s\n", m);
+	++m;
+	while (*m != '\t') {
+		start = m;
+		m++;
+		while (*m != '\n') {
+			++m;
+		}
+		printf("here? %s\n", start);
+	}
+	*m = 0;
+}
+
 token_t *Tokenize(char *file, ssize_t length)
 {
 	char *map = calloc(1, 1 + length);
@@ -162,28 +178,30 @@ token_t *Tokenize(char *file, ssize_t length)
 		char *start = m;
 		int end_instruction = 0;
 
-		while (*m != ',' && *m != ' ' && *m != '\t' && *m != '\r') {
-			if (*m == '\n') {
+		flags_t flags;
+		memset(&flags, 0, sizeof(flags));
+	
+		while (*m != ',' && *m != ' ' && *m != '\r') {
+			if (*m == '\t') 
+				GetBlocks(m);
+				m++;
+			else if (*m == '\n') {
 				end_instruction = 1;
 				break;
 			}
-			if (*m == '"') {
+			else if (*m == '"') {
 				m++; // onwards christian soldier!
 				while (*m != '"') {
 					++m;
 				}
 				m++;
-			} else 
-				++m;
-			
+			} else
+				m++;
 		}
 
 		*m = '\0'; 
-		//if (end_instruction) // please jesus
 		m++;
 
-		flags_t flags;
-		memset(&flags, 0, sizeof(flags));
 
 
 		if (end_instruction) {
@@ -193,38 +211,9 @@ token_t *Tokenize(char *file, ssize_t length)
 				flags.has_block = 1;
 
 		}
-
 		token_t *here_i_am = AddToken(tokens, start, &flags);
-		/*	
-		printf("well here it is %s\n", start);
-		if (end_instruction && flags.has_block && here_i_am) {
-			while (*m == ' ' || *m == '\r')
-				m++;	
-			if (*m == '\n') puts("end of line");
-			while (*m != ',' && *m != ' ' && *m != '\r') {
-				if (*m == '\t') {
-					m++;//fwd(m, m, end); //m++;
-					while (*m != '\n')
-						++m;
-					//	fwd(m,m, end); //++m;
-					//fwd(m, m, end); //m++;
-					++m;
-				} else {
-					//fwd(m, m, end);//++m;
-					++m;
-				}
-			}
-			
-			*m = '\0'; 
-			++m; // ere?
-			memset(&flags, 0, sizeof(flags));
 
-			printf("IT IS %s and m is %p\n", start, m);
-			AddToken(here_i_am->block, start, &flags);
-		}
-		*/
 		while (*m == ' ' || *m == '\t' || *m == '\r' || *m == '\n') {
-			//fwd(m,m,end);;
 			m++;
 		}			
 	}
