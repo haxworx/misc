@@ -131,6 +131,15 @@ void TokensList(token_t *tokens)
 	}
 }
 
+void fwd(char *p, char *start, char *end)
+{
+	if (start < end)
+		p++;
+	else {
+		puts("NOOOOOOOOO");
+		exit(2);
+	}
+}
 
 token_t *Tokenize(char *file, ssize_t length)
 {
@@ -147,7 +156,8 @@ token_t *Tokenize(char *file, ssize_t length)
 	fclose(f);
 
 	char *m = map;
-
+	char *end = m + length;
+	printf("end is %p\n", end);
 	while (*m) {
 		char *start = m;
 		int end_instruction = 0;
@@ -169,6 +179,7 @@ token_t *Tokenize(char *file, ssize_t length)
 		}
 
 		*m = '\0'; 
+		//if (end_instruction) // please jesus
 		m++;
 
 		flags_t flags;
@@ -184,28 +195,37 @@ token_t *Tokenize(char *file, ssize_t length)
 		}
 
 		token_t *here_i_am = AddToken(tokens, start, &flags);
-		
+		/*	
 		printf("well here it is %s\n", start);
 		if (end_instruction && flags.has_block && here_i_am) {
+			while (*m == ' ' || *m == '\r')
+				m++;	
+			if (*m == '\n') puts("end of line");
 			while (*m != ',' && *m != ' ' && *m != '\r') {
 				if (*m == '\t') {
-					m++;
+					m++;//fwd(m, m, end); //m++;
 					while (*m != '\n')
 						++m;
-					m++;
+					//	fwd(m,m, end); //++m;
+					//fwd(m, m, end); //m++;
+					++m;
 				} else {
+					//fwd(m, m, end);//++m;
 					++m;
 				}
 			}
 			
 			*m = '\0'; 
+			++m; // ere?
 			memset(&flags, 0, sizeof(flags));
-			printf("IT IS %s\n", start);
+
+			printf("IT IS %s and m is %p\n", start, m);
 			AddToken(here_i_am->block, start, &flags);
 		}
-
+		*/
 		while (*m == ' ' || *m == '\t' || *m == '\r' || *m == '\n') {
-			++m;
+			//fwd(m,m,end);;
+			m++;
 		}			
 	}
 
