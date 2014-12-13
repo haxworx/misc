@@ -182,14 +182,16 @@ token_t *Tokenize(char *file, ssize_t length)
 		memset(&flags, 0, sizeof(flags));
 	
 		while (*m != ',' && *m != ' ' && *m != '\r') {
-			if (*m == '\t') 
-				GetBlocks(m);
+			if (*m == '\t') {
 				m++;
-			else if (*m == '\n') {
+				while (*m != '\t')
+					++m;
+				m++;
+				//GetBlocks(m);
+			} else if (*m == '\n') {
 				end_instruction = 1;
 				break;
-			}
-			else if (*m == '"') {
+			} else if (*m == '"') {
 				m++; // onwards christian soldier!
 				while (*m != '"') {
 					++m;
@@ -213,7 +215,7 @@ token_t *Tokenize(char *file, ssize_t length)
 		}
 		token_t *here_i_am = AddToken(tokens, start, &flags);
 
-		while (*m == ' ' || *m == '\t' || *m == '\r' || *m == '\n') {
+		while (*m == ' ' ||  *m == '\r' || *m == '\n') {
 			m++;
 		}			
 	}
