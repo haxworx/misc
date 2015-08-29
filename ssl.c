@@ -32,8 +32,6 @@ void init_ssl(void)
 	OpenSSL_add_all_algorithms();
 }
 
-int use_https_ssl = 1; // 1 for SSL 0 for plain-text
-
 SSL *Connect_SSL(const char *hostname, unsigned int port)
 {
 	SSL *bio = NULL;
@@ -49,7 +47,7 @@ SSL *Connect_SSL(const char *hostname, unsigned int port)
 	bio = (SSL *) BIO_new_ssl_connect(ctx);
 	if (bio == NULL)
 	{
-		Error("BIO_new_ssl_connect");
+		return NULL;
 	}
 	
 	BIO_get_ssl((BIO *) bio, &ssl);
@@ -58,7 +56,7 @@ SSL *Connect_SSL(const char *hostname, unsigned int port)
 	
 	if (BIO_do_connect((BIO *) bio) <= 0)
 	{
-		Error("SSL Unable to connect");
+		return NULL;
 	}
 
 	return bio;
@@ -87,14 +85,18 @@ int main(void)
 	const char *hostname = "google.com";
 	unsigned int port = 443;
 	
-	SSL *ssl = Connect_SSL(hostname, port);
+	char buf[BUF_MAX] = { 0 };
+	char* msg = "GET / HTTP/1.1\r\nHost: google.com\r\n\r\n";
 	
-	char buf[1024] = { 0 };
-	char* msg = "GET / HTTP/1.1\r\nHost:google.com\r\n\r\n";
+	SSL *ssl = Connect_SSL(hostname, port);
+	if (ssl == NULL)
+	{
+		Error("We could not connect!");
+	}
 
 	ssize_t len = Write_SSL(ssl, msg, strlen(msg));
+
 	len = Read_SSL(ssl, buf, sizeof(buf));
-	
 	buf[len] = 0;
 
 	// RESPONSE 
