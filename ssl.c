@@ -50,15 +50,12 @@ void init_ssl(void)
 	ERR_load_BIO_strings();
 	OpenSSL_add_all_algorithms();
 }
-static int debugging = 0;
 
 int use_https_ssl = 1; // 1 for SSL 0 for plain-text
 
-BIO *bio = NULL;
-
-BIO *Connect_SSL(const char *hostname, unsigned int port)
+SSL *Connect_SSL(const char *hostname, unsigned int port)
 {
-	//BIO *bio = NULL;
+	SSL *bio = NULL;
 	char bio_addr[BUF_MAX] = { 0 };
 	
 	snprintf(bio_addr, sizeof(bio_addr), "%s:%d", hostname, port);
@@ -68,17 +65,17 @@ BIO *Connect_SSL(const char *hostname, unsigned int port)
 	SSL_CTX *ctx = SSL_CTX_new(SSLv23_client_method());
 	SSL *ssl = NULL;
 	
-	bio = BIO_new_ssl_connect(ctx);
+	bio = (SSL *) BIO_new_ssl_connect(ctx);
 	if (bio == NULL)
 	{
 		Error("BIO_new_ssl_connect");
 	}
 	
-	BIO_get_ssl(bio, &ssl);
+	BIO_get_ssl((BIO *) bio, &ssl);
 	SSL_set_mode(ssl, SSL_MODE_AUTO_RETRY);
-	BIO_set_conn_hostname(bio, bio_addr);
+	BIO_set_conn_hostname((BIO *) bio, bio_addr);
 	
-	if (BIO_do_connect(bio) <= 0)
+	if (BIO_do_connect((BIO *) bio) <= 0)
 	{
 		Error("SSL Unable to connect");
 	}
@@ -86,99 +83,21 @@ BIO *Connect_SSL(const char *hostname, unsigned int port)
 	return bio;
 }
 
-int Connect(const char *hostname, unsigned int port)
+ssize_t Read_SSL(SSL *ssl, char *buf, int len)
 {
-	if (use_https_ssl)
-	{
-		Connect_SSL(hostname, port);
-		return 1;
-	}
-	
-	int sock;
-	struct hostent *host;
-	struct sockaddr_in host_addr;
-
-	sock = socket(AF_INET, SOCK_STREAM, 0);
-	if (sock < 0)
-	{
-		Error("socket()");
-	}
-
-	host = gethostbyname(hostname);
-	if (host == NULL)
-	{
-		Error("gethostbyname()");
-	}
-
-	host_addr.sin_family = AF_INET;
-	host_addr.sin_port = htons(port);
-	host_addr.sin_addr = *((struct in_addr *)host->h_addr);
-	memset(&host_addr.sin_zero, 0, 8);
-
-	int status = connect(sock, (struct sockaddr *)&host_addr,
-			     sizeof(struct sockaddr));
-
-	if (status == 0)
-	{
-		return sock;
-	}
-
-	return 0;
+	return BIO_read((BIO *) ssl, buf, len);
 }
 
-
-ssize_t Read_SSL(BIO *bio, char *buf, int len)
+ssize_t Write_SSL(SSL *ssl, char *buf, int len)
 {
-	return BIO_read(bio, buf, len);
+	return BIO_write((BIO *) ssl, buf, len);
 }
 
-ssize_t Write_SSL(BIO *bio, char *buf, int len)
+void Disconnect_SSL(SSL *ssl)
 {
-	return BIO_write(bio, buf, len);
+	BIO_free_all((BIO *) ssl);
+	ssl = NULL;
 }
-
-ssize_t Read(int sock, char *buf, int len)
-{
-	if (use_https_ssl)
-	{
-		return BIO_read(bio, buf, len);
-	}
-	
-	return read(sock, buf, len);
-}
-
-ssize_t Write(int sock, char *buf, int len)
-{
-	if (debugging)
-	{
-		printf("%s", buf);
-	}
-
-	if (use_https_ssl)
-	{
-		return BIO_write(bio, buf, len);
-	}
-	
-	return write(sock, buf, len);
-}
-
-void Disconnect_SSL(BIO *bio)
-{
-	BIO_free_all(bio);
-	bio = NULL;
-}
-
-int Close(int sock)
-{
-	if (use_https_ssl)
-	{
-		BIO_free_all(bio); bio = NULL;
-		return 0;
-	}
-	
-	return close(sock);
-}
-
 
 int main(void)
 {
@@ -187,20 +106,20 @@ int main(void)
 	const char *hostname = "google.com";
 	unsigned int port = 443;
 	
-	BIO *bio = Connect_SSL(hostname, port);
+	SSL *ssl = Connect_SSL(hostname, port);
 	
 	char buf[1024] = { 0 };
 	char* msg = "GET / HTTP/1.1\r\nHost:google.com\r\n\r\n";
 
-	ssize_t len = Write_SSL(bio, msg, strlen(msg));
-	len = Read_SSL(bio, buf, sizeof(buf));
+	ssize_t len = Write_SSL(ssl, msg, strlen(msg));
+	len = Read_SSL(ssl, buf, sizeof(buf));
 	
 	buf[len] = 0;
 
 	// RESPONSE 
 	printf("%s\n", buf);
 	
-	Disconnect_SSL(bio);
+	Disconnect_SSL(ssl);
 
 	return EXIT_SUCCESS;
 }
