@@ -126,6 +126,17 @@ int Connect(const char *hostname, unsigned int port)
 	return 0;
 }
 
+
+ssize_t Read_SSL(BIO *bio, char *buf, int len)
+{
+	return BIO_read(bio, buf, len);
+}
+
+ssize_t Write_SSL(BIO *bio, char *buf, int len)
+{
+	return BIO_write(bio, buf, len);
+}
+
 ssize_t Read(int sock, char *buf, int len)
 {
 	if (use_https_ssl)
@@ -151,7 +162,7 @@ ssize_t Write(int sock, char *buf, int len)
 	return write(sock, buf, len);
 }
 
-void Disconnect(void)
+void Disconnect_SSL(BIO *bio)
 {
 	BIO_free_all(bio);
 	bio = NULL;
@@ -168,7 +179,6 @@ int Close(int sock)
 	return close(sock);
 }
 
-#define SSL_RDWR 0
 
 int main(void)
 {
@@ -177,22 +187,20 @@ int main(void)
 	const char *hostname = "google.com";
 	unsigned int port = 443;
 	
-	use_https_ssl = 1; // SSL! 
-	
-	Connect(hostname, port);
+	BIO *bio = Connect_SSL(hostname, port);
 	
 	char buf[1024] = { 0 };
 	char* msg = "GET / HTTP/1.1\r\nHost:google.com\r\n\r\n";
 
-	ssize_t len = Write(SSL_RDWR, msg, strlen(msg));
-
-	len = Read(SSL_RDWR, buf, sizeof(buf));
+	ssize_t len = Write_SSL(bio, msg, strlen(msg));
+	len = Read_SSL(bio, buf, sizeof(buf));
+	
 	buf[len] = 0;
 
 	// RESPONSE 
 	printf("%s\n", buf);
 	
-	Disconnect();
+	Disconnect_SSL(bio);
 
 	return EXIT_SUCCESS;
 }
