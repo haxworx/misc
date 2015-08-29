@@ -151,6 +151,12 @@ ssize_t Write(int sock, char *buf, int len)
 	return write(sock, buf, len);
 }
 
+void Disconnect(void)
+{
+	BIO_free_all(bio);
+	bio = NULL;
+}
+
 int Close(int sock)
 {
 	if (use_https_ssl)
@@ -168,20 +174,25 @@ int main(void)
 {
 	init_ssl();
 	
-	const char *hostname = "nipl.net";
+	const char *hostname = "google.com";
 	unsigned int port = 443;
 	
 	use_https_ssl = 1; // SSL! 
 	
-	Connect_SSL(hostname, port);
+	Connect(hostname, port);
 	
 	char buf[1024] = { 0 };
-	char* msg = "Hello World!\r\n\r\n";
-	
+	char* msg = "GET / HTTP/1.1\r\nHost:google.com\r\n\r\n";
+
 	ssize_t len = Write(SSL_RDWR, msg, strlen(msg));
+
 	len = Read(SSL_RDWR, buf, sizeof(buf));
-	
 	buf[len] = 0;
+
+	// RESPONSE 
+	printf("%s\n", buf);
 	
-	Close(0);
+	Disconnect();
+
+	return EXIT_SUCCESS;
 }
