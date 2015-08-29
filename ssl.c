@@ -5,31 +5,12 @@
 */
 
 #include <stdio.h>
-#include <stdlib.h>
 #include <stdarg.h>
-#include <string.h>
-#include <dirent.h>
-#include <limits.h>
-#include <stdbool.h>
-#include <time.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <sys/socket.h>
-#include <sys/select.h>
-#include <netdb.h>
-#include <netinet/in.h>
-#include <sys/stat.h>
-#include <sys/wait.h>
-#ifndef PATH_MAX
-#define PATH_MAX 4096
-#endif
 #include <openssl/bio.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 
 #define BUF_MAX 8192
-
-#define h_addr h_addr_list[0]
 
 void Error(char *fmt, ...)
 {
