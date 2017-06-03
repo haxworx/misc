@@ -1,16 +1,16 @@
-/* 
+/*
    Copyright (c) 2015, Al Poole <netstar@gmail.com> All rights reserved.
 
    Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions are met:
 
    1. Redistributions of source code must retain the above copyright notice,
-   this list of conditions and the following disclaimer. 2. Redistributions in 
+   this list of conditions and the following disclaimer. 2. Redistributions in
    binary form must reproduce the above copyright notice, this list of
    conditions and the following disclaimer in the documentation and/or other
    materials provided with the distribution.
 
-   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" 
+   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
    AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
    IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
    ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
@@ -26,7 +26,7 @@
 
 /*
 	SSL easy peasy, it's C see!
-	
+ test	
 	gcc -std=c99 ssl.c -lssl -lcrypto
 */
 
@@ -62,24 +62,24 @@ SSL *Connect_SSL(const char *hostname, unsigned int port)
 {
 	SSL *bio = NULL;
 	char bio_addr[BUF_MAX] = { 0 };
-	
+
 	snprintf(bio_addr, sizeof(bio_addr), "%s:%d", hostname, port);
-	
+
 	SSL_library_init();
-	
+
 	SSL_CTX *ctx = SSL_CTX_new(SSLv23_client_method());
 	SSL *ssl = NULL;
-	
+
 	bio = (SSL *) BIO_new_ssl_connect(ctx);
 	if (bio == NULL)
 	{
 		return NULL;
 	}
-	
+
 	BIO_get_ssl((BIO *) bio, &ssl);
 	SSL_set_mode(ssl, SSL_MODE_AUTO_RETRY);
 	BIO_set_conn_hostname((BIO *) bio, bio_addr);
-	
+
 	if (BIO_do_connect((BIO *) bio) <= 0)
 	{
 		return NULL;
@@ -107,13 +107,13 @@ void Disconnect_SSL(SSL *ssl)
 int main(void)
 {
 	init_ssl();
-	
+
 	const char *hostname = "google.com";
 	unsigned int port = 443;
-	
+
 	char buf[BUF_MAX] = { 0 };
 	char* msg = "GET / HTTP/1.1\r\nHost: google.com\r\n\r\n";
-	
+
 	SSL *ssl = Connect_SSL(hostname, port);
 	if (ssl == NULL)
 	{
@@ -125,9 +125,9 @@ int main(void)
 	len = Read_SSL(ssl, buf, sizeof(buf));
 	buf[len] = 0;
 
-	// RESPONSE 
+	// RESPONSE
 	printf("%s\n", buf);
-	
+
 	Disconnect_SSL(ssl);
 
 	return EXIT_SUCCESS;
